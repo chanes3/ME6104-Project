@@ -1,7 +1,9 @@
 from stl import mesh
 import numpy as np
+from matplotlib import pyplot
+from mpl_toolkits import mplot3d
 
-class Sheet(mesh.Mesh):
+class Sheet():
     def __init__(self, length, width):
         self.length = length
         self.width = width
@@ -15,6 +17,11 @@ class Sheet(mesh.Mesh):
             [0, 1, 2],
             [3, 1, 2]
         ])
+        self.mesh = mesh.Mesh(np.zeros(self.faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(self.faces):
+            for j in range(3):
+                self.mesh.vectors[i][j] = self.vertices[f[j],:]
+
         self.number_of_folds = 0
         self.fold_stack = []
         self.fold_stack_storage = []
@@ -31,7 +38,11 @@ class Sheet(mesh.Mesh):
     def changeWidth(self, width):
         self.width = width
 
-    def doFold(self,fold):
+    def undoFold(self): #TODO - implement undoFold if there is time
+        pass
+
+    def doFold(self,fold): #TODO -
+        self.number_of_folds += 1
         pass
 
     def addFold(self, fold):
@@ -39,6 +50,15 @@ class Sheet(mesh.Mesh):
 
     def popFold(self, fold):
         return self.fold_stack.pop()
+
+    def plot(self):
+        figure1 = pyplot.figure()
+        figure1.suptitle('Custom Rotation of tessa_vase_filled.stl')
+        axes1 = mplot3d.Axes3D(figure1)
+        axes1.set_xlabel('$X$')
+        axes1.set_ylabel('$Y$')
+        axes1.set_zlabel('$Z$')
+        axes1.add_collection3d(mplot3d.art3d.Poly3DCollection(self.mesh.vectors))
 
 
     #inner class Fold:

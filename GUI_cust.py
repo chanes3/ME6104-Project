@@ -1,10 +1,11 @@
-import Sheet
+from Sheet import Sheet
 import tkinter as tk
 from tkinter.filedialog import askopenfilename
 from stl import mesh
 import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits import mplot3d
+from pathlib import Path
 
 my_mesh_base = []
 
@@ -23,8 +24,6 @@ class Application(tk.Frame):
         #self.number = app_number
         self.create_widgets()
         self.figure = pyplot.figure() #figure to draw on
-        self.filename = ""
-
 
     def create_widgets(self):
         self.update_pl = tk.Button(self)
@@ -32,10 +31,11 @@ class Application(tk.Frame):
         self.update_pl["command"] = self.update_plot
         self.update_pl.grid(row=10, column=0)
 
-        self.file_button = tk.Button(self)
-        self.file_button["text"] = "Open File"
-        self.file_button["command"] = self.open_file
-        self.file_button.grid(row=0, column=0)
+        #self.file_button = tk.Button(self)
+        #self.file_button["text"] = "Open File"
+        #self.file_button["command"] = self.open_file
+        #self.file_button.grid(row=0, column=0)
+
             #Save buttons & filename input:
         self.save_stl_button = tk.Button(self)
         self.save_stl_button["text"] = "Save .stl"
@@ -47,10 +47,11 @@ class Application(tk.Frame):
         self.save_fig_button["command"] = self.save_fig
         self.save_fig_button.grid(row=0, column=2)
 
-        self.lbl_savename= tk.Label(self, text="save as:")
-        self.lbl_savename.grid(row=0, column=3)
-        self.txt_savename = tk.Entry(self, width=20, textvariable = "filenameHere (.stl and .fig will be added automatically)")
-        self.txt_savename.grid(row=0, column=4)
+        #removed because saving without string literals is finicky
+        #self.lbl_savename= tk.Label(self, text="save as:")
+        #self.lbl_savename.grid(row=0, column=3)
+        #self.txt_savename = tk.Entry(self, width=20)
+        #self.txt_savename.grid(row=0, column=4)
 
 
 
@@ -70,12 +71,6 @@ class Application(tk.Frame):
 
         self.txt_y = tk.Entry(self, width=10)
         self.txt_y.grid(row=1, column=4)
-
-        self.lbl_numPts = tk.Label(self, text="# of points:")
-        self.lbl_numPts.grid(row=1, column=5)
-
-        self.txt_numPts = tk.Entry(self, width=10)
-        self.txt_numPts.grid(row=1, column=6)
 
         self.create_sheet_button = tk.Button(self)
         self.create_sheet_button["text"] = "Create Sheet"
@@ -116,29 +111,53 @@ class Application(tk.Frame):
         if tk.messagebox.askokcancel(title="Quit Warning", message="Are you sure you want to quit? Work will not be saved"):
             self.master.destroy()
 
-    def update_plot(self):
-        print("Plot Updating")
-        #plot_mesh(my_mesh_base)
-
-        print("Plot Updated")
-
-
-    def open_file(self):
+    def update_plot(self): #done
         try:
-            self.filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file
-            self.my_mesh_base =mesh.Mesh.from_file(self.filename)
+            print("Plot Updating")
+            self.figure.suptitle('My Origami')
+            axes = mplot3d.Axes3D(self.figure)
+            axes.set_xlabel('$X$')
+            axes.set_ylabel('$Y$')
+            axes.set_zlabel('$Z$')
+            axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
+            scale = self.sheet.mesh.points.flatten('F')
+            axes.auto_scale_xyz(scale, scale, scale)
+            pyplot.show()
         except:
-            tk.messagebox.showwarning("Open file","Cannot open this file: \n(%s)" % self.filename)
+            tk.messagebox.showwarning("Update Plot","Failed to update plot")
+        else:
+            print("Plot Updated")
 
 
-    def save_stl(self): #Yi
-        print("save stl")
+    #def open_file(self): #Might take this out, limit user to generate a new sheet
+    #    try:
+    #        self.filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file
+    #        self.my_mesh_base =mesh.Mesh.from_file(self.filename)
+    #    except:
+    #        tk.messagebox.showwarning("Open file","Cannot open this file: \n(%s)" % self.filename)
 
-    def create_sheet(self):
+    def save_stl(self): #Done
+
+        try:
+            self.sheet.mesh.save("MyOrigami.stl")
+        except:
+            tk.messagebox.showwarning("Save File",["Failed to save this file:", self.filename])
+        else:
+            print("file saved to ", "MyOrigami.stl")
+
+    def create_sheet(self): #Done
         if tk.messagebox.askokcancel(title="Create Warning", message="Create sheet? Current sheet will be lost."):
-            print("Creating", float(self.txt_x.get()), "x", float(self.txt_y.get()), "sheet with:", self.txt_numPts.get(), "points")
+            print("Creating", float(self.txt_x.get()), "x", float(self.txt_y.get()), " sheet")
+            try:
+                self.sheet = Sheet(float(self.txt_x.get()), float(self.txt_y.get()))
+            except:
+                tk.messagebox.showwarning("Create Sheet","Failed to create sheet")
+            else:
+                print("Sheet Created")
 
-    def update_equation(self):
+
+
+    def update_equation(self): #TODO
         m = self.txt_m.get()
         b = self.txt_b.get()
         if (m == '' or b == ''):
@@ -147,24 +166,13 @@ class Application(tk.Frame):
             print("m = ", float(m), " b = ", float(b))
 
 
-    def plot_mesh(self, mesh):
-        figure1 = pyplot.figure()
-        figure1.suptitle('My Origami')
-        axes = mplot3d.Axes3D(figure1)
-        axes.set_xlabel('$X$')
-        axes.set_ylabel('$Y$')
-        axes.set_zlabel('$Z$')
-        axes.add_collection3d(mplot3d.art3d.Poly3DCollection(mesh.vectors))
-        scale = mesh.points.flatten('F')
-        axes.auto_scale_xyz(scale, scale, scale)
-        pyplot.show()
 
-    def save_fig(self):
+    def save_fig(self): #Done
+
         try:
-            self.figure.savefig(self.txt_savename, facecolor='w', bbox_inches = 'tight')
-            self.filename = self.txt_savename
+            self.figure.savefig("MyOrigami.png", facecolor='w', bbox_inches = 'tight')
         except:
-            tk.messagebox.showwarning("Save file Error","Cannot save this file: \n(%s)" % self.filename)
+            tk.messagebox.showwarning("Save File",["Failed to save this file:", self.filename])
 
 app = Application(master=root)
 
