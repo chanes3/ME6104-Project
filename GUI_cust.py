@@ -13,7 +13,7 @@ my_mesh_base = []
 #GUI Initialization
 root = tk.Tk()
 root.geometry('700x500')
-root.title("Origami GUI v0.1")
+root.title("Origami GUI v0.2")
 
 
 class Application(tk.Frame):
@@ -21,7 +21,6 @@ class Application(tk.Frame):
         super().__init__(master)
         self.master = master
         self.pack()
-        #self.number = app_number
         self.create_widgets()
         self.figure = pyplot.figure() #figure to draw on
 
@@ -31,6 +30,7 @@ class Application(tk.Frame):
         self.update_pl["command"] = self.update_plot
         self.update_pl.grid(row=10, column=0)
 
+            #loading removed for time
         #self.file_button = tk.Button(self)
         #self.file_button["text"] = "Open File"
         #self.file_button["command"] = self.open_file
@@ -47,7 +47,7 @@ class Application(tk.Frame):
         self.save_fig_button["command"] = self.save_fig
         self.save_fig_button.grid(row=0, column=2)
 
-        #removed because saving without string literals is finicky
+            #removed because saving without string literals is finicky
         #self.lbl_savename= tk.Label(self, text="save as:")
         #self.lbl_savename.grid(row=0, column=3)
         #self.txt_savename = tk.Entry(self, width=20)
@@ -60,17 +60,17 @@ class Application(tk.Frame):
         self.lbl_format = tk.Label(self, text="Sheet Params:")
         self.lbl_format.grid(row=1, column=0)
 
-        self.lbl_x = tk.Label(self, text="xlength:")
-        self.lbl_x.grid(row=1, column=1)
+        self.lbl_xLength = tk.Label(self, text="xlength:")
+        self.lbl_xLength.grid(row=1, column=1)
 
-        self.txt_x = tk.Entry(self, width=10)
-        self.txt_x.grid(row=1, column=2)
+        self.txt_xLength = tk.Entry(self, width=10)
+        self.txt_xLength.grid(row=1, column=2)
 
-        self.lbl_y = tk.Label(self, text="ylength:")
-        self.lbl_y.grid(row=1, column=3)
+        self.lbl_yLength = tk.Label(self, text="ylength:")
+        self.lbl_yLength.grid(row=1, column=3)
 
-        self.txt_y = tk.Entry(self, width=10)
-        self.txt_y.grid(row=1, column=4)
+        self.txt_yLength = tk.Entry(self, width=10)
+        self.txt_yLength.grid(row=1, column=4)
 
         self.create_sheet_button = tk.Button(self)
         self.create_sheet_button["text"] = "Create Sheet"
@@ -79,27 +79,43 @@ class Application(tk.Frame):
 
 
         #Row 2: Fold parameter input:
-        self.lbl_fold = tk.Label(self, text="y = mx+b")
+        self.lbl_fold = tk.Label(self, text="Fold endpoints:")
         self.lbl_fold.grid(row=2, column=0)
 
-        self.lbl_m = tk.Label(self, text="m:")
-        self.lbl_m.grid(row=2, column=1)
+        self.lbl_x1 = tk.Label(self, text="x1:")
+        self.lbl_x1.grid(row=2, column=1)
 
-        self.txt_m = tk.Entry(self, width=10)
-        self.txt_m.grid(row=2, column=2)
+        self.txt_x1 = tk.Entry(self, width=10)
+        self.txt_x1.grid(row=2, column=2)
 
-        self.lbl_b = tk.Label(self, text="b:")
-        self.lbl_b.grid(row=2, column=3)
+        self.lbl_y1 = tk.Label(self, text="y1:")
+        self.lbl_y1.grid(row=2, column=3)
 
-        self.txt_b = tk.Entry(self, width=10)
-        self.txt_b.grid(row=2, column=4)
+        self.txt_y1 = tk.Entry(self, width=10)
+        self.txt_y1.grid(row=2, column=4)
+
+        self.lbl_x2 = tk.Label(self, text="x2:")
+        self.lbl_x2.grid(row=2, column=5)
+
+        self.txt_x2 = tk.Entry(self, width=10)
+        self.txt_x2.grid(row=2, column=6)
+
+        self.lbl_y2 = tk.Label(self, text="y2:")
+        self.lbl_y2.grid(row=2, column=7)
+
+        self.txt_y2 = tk.Entry(self, width=10)
+        self.txt_y2.grid(row=2, column=8)
 
         #Update equation based on inputs
-        self.update_eqn = tk.Button(self)
-        self.update_eqn["text"] = "Update Equation"
-        self.update_eqn["command"] = self.update_equation
-        self.update_eqn.grid(row=2, column=5)
+        self.preview_button = tk.Button(self)
+        self.preview_button["text"] = "Preview Fold"
+        self.preview_button["command"] = self.preview_fold
+        self.preview_button.grid(row=2, column=9)
 
+        self.commit_button = tk.Button(self)
+        self.commit_button["text"] = "Commit Fold"
+        self.commit_button["command"] = self.commit_fold
+        self.commit_button.grid(row=2, column=10)
 
 
         #Quit button
@@ -111,17 +127,41 @@ class Application(tk.Frame):
         if tk.messagebox.askokcancel(title="Quit Warning", message="Are you sure you want to quit? Work will not be saved"):
             self.master.destroy()
 
+    def preview_fold(self):
+        print("Preview fold")
+        x0 = float(self.txt_x1.get())
+        x1 = float(self.txt_x2.get())
+        y0 = float(self.txt_y1.get())
+        y1 = float(self.txt_y2.get())
+        x = np.linspace(x0, x1, 100)
+        y = np.linspace(y0, y1, 100)
+        z = np.linspace(0, 0, 100)
+        self.axes.plot(x, y, z, "r", zorder = 2)
+        pyplot.show()
+        print("now displaying fold")
+
+    def commit_fold(self): #todo
+        print("Fold Committed")
+        x0 = float(self.txt_x1.get())
+        x1 = float(self.txt_x2.get())
+        y0 = float(self.txt_y1.get())
+        y1 = float(self.txt_y2.get())
+
+        self.sheet.addFold([x0, x1], [y0, y1])
+        pass
+
+
     def update_plot(self): #done
         try:
             print("Plot Updating")
             self.figure.suptitle('My Origami')
-            axes = mplot3d.Axes3D(self.figure)
-            axes.set_xlabel('$X$')
-            axes.set_ylabel('$Y$')
-            axes.set_zlabel('$Z$')
-            axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
+            self.axes = mplot3d.Axes3D(self.figure)
+            self.axes.set_xlabel('$X$')
+            self.axes.set_ylabel('$Y$')
+            self.axes.set_zlabel('$Z$')
+            self.axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
             scale = self.sheet.mesh.points.flatten('F')
-            axes.auto_scale_xyz(scale, scale, scale)
+            self.axes.auto_scale_xyz(scale, scale, scale)
             pyplot.show()
         except:
             tk.messagebox.showwarning("Update Plot","Failed to update plot")
@@ -147,13 +187,13 @@ class Application(tk.Frame):
 
     def create_sheet(self): #Done
         if tk.messagebox.askokcancel(title="Create Warning", message="Create sheet? Current sheet will be lost."):
-            print("Creating", float(self.txt_x.get()), "x", float(self.txt_y.get()), " sheet")
-            try:
-                self.sheet = Sheet(float(self.txt_x.get()), float(self.txt_y.get()))
-            except:
-                tk.messagebox.showwarning("Create Sheet","Failed to create sheet")
-            else:
-                print("Sheet Created")
+            print("Creating", float(self.txt_xLength.get()), "x", float(self.txt_yLength.get()), " sheet")
+            #try:
+            self.sheet = Sheet(float(self.txt_xLength.get()), float(self.txt_yLength.get()))
+            #except:
+            #    tk.messagebox.showwarning("Create Sheet","Failed to create sheet")
+            #else:
+            print("Sheet Created")
 
 
 

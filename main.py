@@ -13,9 +13,16 @@ from stl import mesh
 
 #https://reader.elsevier.com/reader/sd/pii/S0024379501006085?token=EF45E528146240D5874D2A04E91C8DEC378F6B94964A57F10B529B823F2003B2DD17D1C2AB8196117E91F2FD1DE2670A
 
-VERTICE_COUNT = 100
-data = np.zeros(VERTICE_COUNT, dtype=mesh.Mesh.dtype)
-your_mesh = mesh.Mesh(data, remove_empty_areas=False)
+#data = np.zeros(VERTICE_COUNT, dtype=mesh.Mesh.dtype)
+#your_mesh = mesh.Mesh(data, remove_empty_areas=False)
+
+for i in range(5-1):
+    first_node = i+1
+    prim_node = 0
+    second_node = i+2
+
+    print([first_node, prim_node, second_node])
+
 
 print("finished")
 
