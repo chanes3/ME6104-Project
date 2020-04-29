@@ -141,32 +141,27 @@ class Application(tk.Frame):
         print("now displaying fold")
 
     def commit_fold(self): #todo
-        print("Fold Committed")
+        print("Committing Fold")
         x0 = float(self.txt_x1.get())
         x1 = float(self.txt_x2.get())
         y0 = float(self.txt_y1.get())
         y1 = float(self.txt_y2.get())
 
         self.sheet.addFold([x0, x1], [y0, y1])
-        pass
+        print("Fold Committed")
 
 
     def update_plot(self): #done
-        try:
-            print("Plot Updating")
-            self.figure.suptitle('My Origami')
-            self.axes = mplot3d.Axes3D(self.figure)
-            self.axes.set_xlabel('$X$')
-            self.axes.set_ylabel('$Y$')
-            self.axes.set_zlabel('$Z$')
-            self.axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
-            scale = self.sheet.mesh.points.flatten('F')
-            self.axes.auto_scale_xyz(scale, scale, scale)
-            pyplot.show()
-        except:
-            tk.messagebox.showwarning("Update Plot","Failed to update plot")
-        else:
-            print("Plot Updated")
+        #TODO link this to sheet.plot()
+        #try:
+        print("Plot Updating")
+        self.sheet.updateMesh()
+        self.sheet.figure = self.figure
+
+        #except:
+        #    tk.messagebox.showwarning("Update Plot","Failed to update plot")
+        #else:
+        print("Plot Updated")
 
 
     #def open_file(self): #Might take this out, limit user to generate a new sheet

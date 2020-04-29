@@ -16,19 +16,22 @@ class Sheet(mesh.Mesh):
         node1.connected = [node0, node3]
         node2.connected = [node0, node3]
         node3.connected = [node2, node1]
+
+        node0.isEdge = True
+        node1.isEdge = True
+        node2.isEdge = True
+        node3.isEdge = True
+
+
         self.nodes = [node0, node1, node2, node3]
 
-        self.getLoops()
-        for i,val in enumerate(self.loops):
-            print(i,",",val.labels)
 
-        self.vertices = np.array([
-            node0.data,
-            node1.data,
-            node2.data,
-            node3.data
-        ])
-        self.getFaces()
+        #self.vertices = np.array([
+        #    node0.data,
+        #    node1.data,
+        #    node2.data,
+        #    node3.data
+        #])
         self.updateMesh()
         self.number_of_folds = 0
         self.fold_stack = []
@@ -38,36 +41,49 @@ class Sheet(mesh.Mesh):
         return "Length = {}; Width = {}".format(self.length, self.width)
 
     def updateMesh(self):
+        self.getLoops()
+        #for i,val in enumerate(self.loops):
+        #    print(i,",",val.labels)
+        self.getVertices()
+        self.getFaces()
+        print("num faces:", len(self.faces))
         self.mesh = mesh.Mesh(np.zeros(self.faces.shape[0],dtype=mesh.Mesh.dtype))
-        for i, f in enumerate(self.faces):
-            for j in range(3):
-                self.mesh.vectors[i][j] = self.vertices[f[j],:]
+        try:
+            for i, f in enumerate(self.faces):
+                for j in range(3):
+                    self.mesh.vectors[i][j] = self.vertices[f[j],:]
+        except:
+            print("NOT AGAIN PLEASE")
+
+    def getVertices(self):
+        temp = np.array([self.nodes[i].data for i in range(len(self.nodes))])
+        self.vertices =temp
 
     def getFaces(self):
-
-        self.faces = self.loops[0].getFaces()
+        self.faces = []
+        faces = []
+        for i in range(len(self.loops)):
+            faces = self.loops[i].getFaces()
+            for j in range(len(faces)):
+                self.faces.append(faces[j])
+        self.faces = np.array(self.faces)
 
 
     def getLoops(self):
         self.loops = []
-        arr_temp = [None] * len(self.nodes)
-        arr_out = [None] *len(self.nodes)
-        loop_count = 0
         #check loops starting at every node
         for i in range(len(self.nodes)):
             temp =Loop(self.nodes[i])
 
             if not self.loops: #if loops is empty
                 self.loops.append(temp)
-                loop_count +=1
             else:
                 add_bool = True
-                for i in range(loop_count):
+                for i in range(len(self.loops)):
                     if not (not_intersect(temp.labels_sorted, self.loops[i].labels_sorted)):#if they're the same
                         add_bool = False
                 if add_bool:
-                    self.loops[loop_count] = temp
-                    loop_count +=1
+                    self.loops.append(temp)
 
     def undoFold(self): #TODO - implement undoFold if there is time
         pass
@@ -76,58 +92,133 @@ class Sheet(mesh.Mesh):
         myfold = Fold(x,y)
         self.fold_stack.append(myfold)
         self.number_of_folds += 1
-
         ##check for intersection
         for i in range(len(self.loops)): #check each loop
+            working_nodes = []
+
             for j in range (len(self.loops[i].line_segs)): #check each line seg in loop
+                #print([i,j])
                 line_seg = self.loops[i].line_segs[j]
-                temp = self.loops.crossCheck([x,line_seg[1:2]], [y, line_seg[3:4]])
-                if not temp:
+                temp = crossCheck([x[0], x[1],line_seg[0], line_seg[1]], [y[0], y[1], line_seg[2], line_seg[3]])
+                if not temp: #catch if lines don't cross
                     pass
                     #do nothing
                 else:
+                    #todo add logic for new nodes from the same fold being linked - HOW TO ORDER NEW NODES????
                     #add nodes where intersection happens
                     #self.addNode(temp)
+                    newlabel = len(self.nodes)
+                    node = Node([temp[0], temp[1], 0], newlabel)
+                    if j == len(self.loops[i].line_segs)-1: #loop index so node 0 isn't left out
+                        j2 = 0
+                    else:
+                        j2 = j+1
 
-                    pass
+                    exists = node.data == self.loops[i].nodes[j].data or node.data == self.loops[i].nodes[j2].data
+
+                    if (exists): #if node already exists as the first node it's linked to
+                        if node.data == self.loops[i].nodes[j].data:
+                            node = self.loops[i].nodes[j]
+                            if node not in working_nodes:
+                                working_nodes.append(node)
+
+                        else: #already exists as 2nd node
+                            node = self.loops[i].nodes[j2]
+                            if node not in working_nodes:
+                                working_nodes.append(node)
+                    else: #doesn't exist - splice it and remove connections it destroys
+                        self.addNode(node)
+                        if node not in working_nodes:
+                            working_nodes.append(node)
+                        #remove the newly destroyed connections from each of the other 2 nodes
+                        self.loops[i].nodes[j].removeConnect(self.loops[i].nodes[j2])
+                        self.loops[i].nodes[j2].removeConnect(self.loops[i].nodes[j])
+
+
+                        #add connections, it's ok if its the same node or if connection already there, addConnect handles it
+                        node.addConnect(self.loops[i].nodes[j])
+                        self.loops[i].nodes[j].addConnect(node)
+                        node.addConnect(self.loops[i].nodes[j2])
+                        self.loops[i].nodes[j2].addConnect(node)
+
+
+
+            #add connections, it's ok if they already have these connections, addConnect takes care of it
+            working_nodes[1].addConnect(working_nodes[0])
+            working_nodes[0].addConnect(working_nodes[1])
 
         self.doFold()
 
     def doFold(self):
         pass
         #flip around fold line
+        #TODO HOW TO CHOOSE WHICH SIDE TO FLIP?
+        #CHeck angle relative to a fixed point on fold line to differentiate each line, choose positive???
 
+    def addNode(self, node):
+        if node not in self.nodes:
+            self.nodes.append(node)
 
     def popFold(self, fold):
         temp = self.fold_stack.pop()
         self.fold_stack_storage.append(temp)
 
     def plot(self):
-        figure1 = pyplot.figure()
-        figure1.suptitle('Custom Rotation of tessa_vase_filled.stl')
-        axes1 = mplot3d.Axes3D(figure1)
-        axes1.set_xlabel('$X$')
-        axes1.set_ylabel('$Y$')
-        axes1.set_zlabel('$Z$')
-        axes1.add_collection3d(mplot3d.art3d.Poly3DCollection(self.mesh.vectors))
-
+        self.axes = mplot3d.Axes3D(self.figure)
+        self.axes.set_xlabel('$X$')
+        self.axes.set_ylabel('$Y$')
+        self.axes.set_zlabel('$Z$')
+        self.axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
+        scale = self.sheet.mesh.points.flatten('F')
+        self.axes.auto_scale_xyz(scale, scale, scale)
+        pyplot.show()
 class Node:
     #Modified based on:https://www.geeksforgeeks.org/doubly-linked-list/
     def __init__(self, data = None, label = None, connected = None):
         self.data = data #[x, y, z] position of Node
-        self.connected = connected #nodes that it is connected to
+        self.initial_data = data #initial position - used to link new nodes after folds are made TODO DOES THIS WORK??? HOW TO GET ORIGINAL POSITION?
+
+
+        if connected != None:
+            self.connected = connected
+        else:
+            self.connected = [] #nodes that it is connected to
         self.label = label #for indexing relative to the overall 'web'
         self.prev = None
         self.next = None
+        self.isEdge = None
 
     def __repr__(self):
         return str(self.label)
 
     def addConnect(self, cn): #add node
-        self.connected.append(cn)
+        if cn not in self.connected and cn != self:
+            self.connected.append(cn)
 
     def removeConnect(self, rm): #remove node
-        self.connected.remove(rm)
+        if rm in self.connected:
+            self.connected.remove(rm)
+        else:
+            print("Remove connection attempted for a node that wasn't connected")
+
+    def translate(self, x, y, z):
+        self.data = [self.data[0] + x, self.data[1]+y, self.data[2] + z]
+
+    def rotate(self, axis, angle):
+        #angle + ccw looking down axis (from tail to tip - like an arrow)
+        #axis = 2 [x,y,z] points
+        #http://paulbourke.net/geometry/rotate/
+        #(1) translate space so that the rotation axis passes through the origin
+        #(2) rotate space about the x axis so that the rotation axis lies in the xz plane
+        #(3) rotate space about the y axis so that the rotation axis lies along the z axis
+        #(4) perform the desired rotation by theta about the z axis
+        #(5) apply the inverse of step (3)
+        #(6) apply the inverse of step (2)
+        #(7) apply the inverse of step (1)
+        axis1 = axis[0:2]
+        axis2 = axis[3:5]
+        #step 1:
+        self.translate()
 
     def getNextRight(self):
         #gets the next node, prioritizing going in the tightest clockwise circle
@@ -173,20 +264,24 @@ class Loop: #a group of nodes that creates a circuit that goes back to the start
         self.labels = []
         self.labels_sorted = []
         self.line_segs = []
-
+        ind = 0
         first = True
-        while node is not None and (first or node is not head): #keep going until the loop stops or repeats
+        print("---------")
+        while node is not None and node not in self.nodes: #keep going until the loop stops or repeats
             if first == True:
                 first = False
-
+            #print(ind)
+            ind +=1
             self.nodes.append(node)
             self.labels.append(node.label)
             self.labels_sorted.append(node.label)
 
             node.next = node.getNextRight()
-
-            self.line_segs.append([node.data[0], node.next.data[0], node.data[1], node.next.data[1]])
-
+            try:
+                self.line_segs.append([node.data[0], node.next.data[0], node.data[1], node.next.data[1]])
+            except:
+                print("Clean Yer nodes (nodes didn't have a next or the data was empty)")
+            print(self.labels)
             temp = node
             node = node.next
             node.prev = temp
@@ -195,6 +290,9 @@ class Loop: #a group of nodes that creates a circuit that goes back to the start
         self.labels_sorted.sort()
 
 
+    def __repr__(self):
+        return np.array(self.nodes)
+
     def getFaces(self):
         primary_node = self.nodes[0]
         temp = [[self.nodes[i+1].label, primary_node.label, self.nodes[i+2].label] for i in range(len(self.nodes)-2)]
@@ -202,7 +300,7 @@ class Loop: #a group of nodes that creates a circuit that goes back to the start
 
 
         #print(np.array(temp))
-        return np.array(temp)
+        return temp
 
 
 
@@ -210,6 +308,9 @@ class Fold:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.nodes_affected = []
+        self.transformation = []
+        self.transformation_inverse = []
 
 def angleBetSeg(x, y):
     #angleBetSeg(x, y)
@@ -249,10 +350,10 @@ def crossCheck(x, y):
     #returns a vector containing the x, y coords of the intersection
     #if there is no intersection, returns false
     #https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
-    x_interval1 = [np.min(x[0], x[1]), np.max(x[0], x[1])]
-    x_interval2 = [np.min(x[2], x[3]), np.max(x[2], x[3])]
-    y_interval1 = [np.min(y[0], y[1]), np.max(y[0], y[1])]
-    y_interval2 = [np.min(y[2], y[3]), np.max(y[2], y[3])]
+    x_interval1 = [min(x[0], x[1]), max(x[0], x[1])]
+    x_interval2 = [min(x[2], x[3]), max(x[2], x[3])]
+    y_interval1 = [min(y[0], y[1]), max(y[0], y[1])]
+    y_interval2 = [min(y[2], y[3]), max(y[2], y[3])]
 
     if (x_interval1[1] < x_interval2[0]) and (x_interval2[0] < x_interval1[0]): #if the line segments don't share x values
         return False
@@ -263,22 +364,20 @@ def crossCheck(x, y):
     #calculate slopes
     if (x_interval1[0] == x_interval1[1]): #check for vertical lines
         x_out = x_interval1[0] #if vertical, we know the x value
-        if (x[3] != x[2]):
+        if (x[3] != x[2]): #if lines aren't parallel
             m2 = (y[3] - y[2])/(x[3] - x[2])
             b2 = y[2]-m2*x[2]
             y_out = m2*x_out + b2
-            return [x_out, y_out]
         else:
             return False
 
 
     elif (x_interval2[0] == x_interval2[1]): #check for vertical lines
         x_out = x_interval2[0] #if vertical, we know the x value
-        if (x[3] != x[2]):
+        if (x[1] != x[0]): #if lines aren't parallel
             m1 = (y[1] - y[0])/(x[1] - x[0])
             b1 = y[0]-m1*x[0]
             y_out = m1*x_out + b1
-            return [x_out, y_out]
         else:
             return False
 
@@ -293,7 +392,15 @@ def crossCheck(x, y):
         #solving for final point
         x_out = (b2-b1)/(m1-m2)
         y_out = m1*x_out + b1
-        return [x_out, y_out]
+
+
+        #make sure outputted point is in the range (gets lost by equations otherwise)
+    if (x_out <x_interval1[0] or x_out < x_interval2[0]) or (x_out >x_interval1[1] or x_out > x_interval2[1]):
+        return False
+    if (y_out <y_interval1[0] or y_out < y_interval2[0]) or (y_out >y_interval1[1] or y_out > y_interval2[1]):
+        return False
+
+    return [x_out, y_out]
 
 def intersect(list1, list2):
     #https://www.geeksforgeeks.org/python-intersection-two-lists/
