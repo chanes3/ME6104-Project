@@ -53,7 +53,7 @@ class Sheet(mesh.Mesh):
                 for j in range(3):
                     self.mesh.vectors[i][j] = self.vertices[f[j],:]
         except:
-            print("NOT AGAIN PLEASE")
+            print("clean your vertices")
 
     def getVertices(self):
         temp = np.array([self.nodes[i].data for i in range(len(self.nodes))])
@@ -163,20 +163,38 @@ class Sheet(mesh.Mesh):
         temp = self.fold_stack.pop()
         self.fold_stack_storage.append(temp)
 
-    def plot(self):
+    def preview(self, x, y):
+        x = np.linspace(x[0], x[1], 100)
+        y = np.linspace(y[0], y[1], 100)
+        z = np.linspace(0, 0, 100)
+        self.axes.plot(x, y, z, "r", zorder = 2)
+        pyplot.show()
+
+
+    def plot(self, print_node = False, print_mesh = False):
         self.axes = mplot3d.Axes3D(self.figure)
         self.axes.set_xlabel('$X$')
         self.axes.set_ylabel('$Y$')
         self.axes.set_zlabel('$Z$')
-        self.axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.sheet.mesh.vectors))
-        scale = self.sheet.mesh.points.flatten('F')
+
+        if print_mesh:
+            self.axes.add_collection3d(mplot3d.art3d.Poly3DCollection(self.mesh.vectors))
+
+        scale = self.mesh.points.flatten('F')
+
+        if print_node:
+            x = np.array([self.nodes[i].data[0] for i in range(len(self.nodes))])
+            y = np.array([self.nodes[j].data[1] for j in range(len(self.nodes))])
+            z = np.array([self.nodes[k].data[2] for k in range(len(self.nodes))])
+
+            self.axes.plot(x, y, z, 'rx')
         self.axes.auto_scale_xyz(scale, scale, scale)
         pyplot.show()
+
 class Node:
     #Modified based on:https://www.geeksforgeeks.org/doubly-linked-list/
     def __init__(self, data = None, label = None, connected = None):
         self.data = data #[x, y, z] position of Node
-        self.initial_data = data #initial position - used to link new nodes after folds are made TODO DOES THIS WORK??? HOW TO GET ORIGINAL POSITION?
 
 
         if connected != None:
@@ -204,7 +222,9 @@ class Node:
     def translate(self, x, y, z):
         self.data = [self.data[0] + x, self.data[1]+y, self.data[2] + z]
 
-    def rotate(self, axis, angle):
+
+
+    def rotateAxis(self, axis, angle):
         #angle + ccw looking down axis (from tail to tip - like an arrow)
         #axis = 2 [x,y,z] points
         #http://paulbourke.net/geometry/rotate/
@@ -215,10 +235,15 @@ class Node:
         #(5) apply the inverse of step (3)
         #(6) apply the inverse of step (2)
         #(7) apply the inverse of step (1)
-        axis1 = axis[0:2]
-        axis2 = axis[3:5]
+        axis_point1 = axis[[0, 2, 4]]
+        axis_point2 = axis[[1, 3, 5]]
         #step 1:
-        self.translate()
+        self.translate(-axis_point1) #set axis_point1 to [0, 0, 0] via translation
+        #step 2:
+        angle_step2 = math.degrees(np.arctan(self.data[1]/self.data[2]))
+        self.data = self.data*rotation_matrix(angle_step2, 0)
+        #step 3:
+        theta_step3 = math.degrees(np.arctan(self))
 
     def getNextRight(self):
         #gets the next node, prioritizing going in the tightest clockwise circle
@@ -311,6 +336,44 @@ class Fold:
         self.nodes_affected = []
         self.transformation = []
         self.transformation_inverse = []
+
+def rotation_matrix(theta, axis, active=False):
+        #https://mail.python.org/pipermail/numpy-discussion/2017-January/076407.html
+        """Generate rotation matrix for a given axis
+
+        Parameters
+        ----------
+
+        theta: numeric, optional
+            The angle (degrees) by which to perform the rotation.  Default is
+            0, which means return the coordinates of the vector in the rotated
+            coordinate system, when rotate_vectors=False.
+        axis: int, optional
+            Axis around which to perform the rotation (x=0; y=1; z=2)
+        active: bool, optional
+            Whether to return active transformation matrix.
+
+        Returns
+        -------
+        numpy.ndarray
+        3x3 rotation matrix
+        """
+        theta = np.radians(theta)
+        if axis == 0:
+            R_theta = np.array([[1, 0, 0],
+                                [0, np.cos(theta), -np.sin(theta)],
+                                [0, np.sin(theta), np.cos(theta)]])
+        elif axis == 1:
+            R_theta = np.array([[np.cos(theta), 0, np.sin(theta)],
+                                [0, 1, 0],
+                                [-np.sin(theta), 0, np.cos(theta)]])
+        else:
+            R_theta = np.array([[np.cos(theta), -np.sin(theta), 0],
+                                [np.sin(theta), np.cos(theta), 0],
+                                [0, 0, 1]])
+        if active:
+            R_theta = np.transpose(R_theta)
+        return R_theta
 
 def angleBetSeg(x, y):
     #angleBetSeg(x, y)

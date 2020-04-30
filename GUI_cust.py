@@ -117,6 +117,11 @@ class Application(tk.Frame):
         self.commit_button["command"] = self.commit_fold
         self.commit_button.grid(row=2, column=10)
 
+        self.print_node_bool = tk.IntVar(value=1)
+        self.check_button_node = tk.Checkbutton(self, text="plot nodes", variable=self.print_node_bool).grid(row=10, column=1)
+        self.print_mesh_bool = tk.IntVar(value=1)
+        self.check_button_mesh = tk.Checkbutton(self, text="plot mesh", variable=self.print_mesh_bool).grid(row=10, column=2)
+
 
         #Quit button
         self.quit = tk.Button(self, text="QUIT", fg="red",
@@ -133,11 +138,7 @@ class Application(tk.Frame):
         x1 = float(self.txt_x2.get())
         y0 = float(self.txt_y1.get())
         y1 = float(self.txt_y2.get())
-        x = np.linspace(x0, x1, 100)
-        y = np.linspace(y0, y1, 100)
-        z = np.linspace(0, 0, 100)
-        self.axes.plot(x, y, z, "r", zorder = 2)
-        pyplot.show()
+        self.sheet.preview([x0, x1], [y0, y1])
         print("now displaying fold")
 
     def commit_fold(self): #todo
@@ -157,7 +158,7 @@ class Application(tk.Frame):
         print("Plot Updating")
         self.sheet.updateMesh()
         self.sheet.figure = self.figure
-
+        self.sheet.plot(self.print_node_bool.get(), self.print_mesh_bool.get())
         #except:
         #    tk.messagebox.showwarning("Update Plot","Failed to update plot")
         #else:
